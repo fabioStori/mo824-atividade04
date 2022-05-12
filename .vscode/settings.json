@@ -1,6 +1,0 @@
-{
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar",
-        "/home/fstori/Documents/Unicamp/gurobi/gurobi951/linux64/lib/gurobi.jar"
-    ]
-}
