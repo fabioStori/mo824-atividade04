@@ -164,6 +164,9 @@ public abstract class AbstractGRASP<E> {
 		Integer iteration = Integer.parseInt(args[1]);
 
 		if (iteration > p) {
+			if (iteration == p + 1) {
+				System.out.println("(Iter. " + iteration + ") Started to use greedy");
+			}
 			/* Main loop, which repeats until the stopping criteria is reached. */
 			while (!constructiveStopCriteria()) {
 
