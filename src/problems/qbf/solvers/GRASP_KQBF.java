@@ -28,6 +28,8 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 
 	public List<Integer> allCandidateList;
 
+	public Boolean firstImproving;
+
 	/**
 	 * Constructor for the GRASP_QBF class. An inverse QBF objective function is
 	 * passed as argument for the superclass constructor.
@@ -42,10 +44,11 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	 * @throws IOException
 	 *             necessary for I/O operations.
 	 */
-	public GRASP_KQBF(Double alpha, Integer iterations, KQBF_Inverse KQBFInverse) throws IOException {
+	public GRASP_KQBF(Double alpha, Integer iterations, KQBF_Inverse KQBFInverse, Boolean firstImproving) throws IOException {
 		super(KQBFInverse, alpha, iterations);
 		this.KQBFInverse = KQBFInverse;
 		this.allCandidateList = makeCL();
+		this.firstImproving = firstImproving;
 	}
 
 	/*
@@ -130,54 +133,112 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 		Double minDeltaCost;
 		Integer bestCandIn = null, bestCandOut = null;
 
-		do {
-			minDeltaCost = Double.POSITIVE_INFINITY;
-			updateCL();
-				
-			// Evaluate insertions
-			for (Integer candIn : CL) {
-				double deltaCost = ObjFunction.evaluateInsertionCost(candIn, sol);
-				if (deltaCost < minDeltaCost) {
-					minDeltaCost = deltaCost;
-					bestCandIn = candIn;
-					bestCandOut = null;
-				}
-			}
-			// Evaluate removals
-			for (Integer candOut : sol) {
-				double deltaCost = ObjFunction.evaluateRemovalCost(candOut, sol);
-				if (deltaCost < minDeltaCost) {
-					minDeltaCost = deltaCost;
-					bestCandIn = null;
-					bestCandOut = candOut;
-				}
-			}
-			// Evaluate exchanges
-			for (Integer candIn : CL) {
-				for (Integer candOut : sol) {
-					double deltaCost = ObjFunction.evaluateExchangeCost(candIn, candOut, sol);
+		if (firstImproving) {
+
+			do {
+				minDeltaCost = Double.POSITIVE_INFINITY;
+				updateCL();
+					
+				// Evaluate insertions
+				for (Integer candIn : CL) {
+					double deltaCost = ObjFunction.evaluateInsertionCost(candIn, sol);
 					if (deltaCost < minDeltaCost) {
 						minDeltaCost = deltaCost;
 						bestCandIn = candIn;
+						bestCandOut = null;
+						break;
+					}
+				}
+				// Evaluate removals
+				for (Integer candOut : sol) {
+					double deltaCost = ObjFunction.evaluateRemovalCost(candOut, sol);
+					if (deltaCost < minDeltaCost) {
+						minDeltaCost = deltaCost;
+						bestCandIn = null;
+						bestCandOut = candOut;
+						break;
+					}
+				}
+				// Evaluate exchanges
+				// for (Integer candIn : CL) {
+				// 	for (Integer candOut : sol) {
+				// 		double deltaCost = ObjFunction.evaluateExchangeCost(candIn, candOut, sol);
+				// 		if (deltaCost < minDeltaCost) {
+				// 			minDeltaCost = deltaCost;
+				// 			bestCandIn = candIn;
+				// 			bestCandOut = candOut;
+				// 		}
+				// 	}
+				// }
+				// Implement the best move, if it reduces the solution cost.
+				if (minDeltaCost < -Double.MIN_VALUE) {
+					if (bestCandOut != null) {
+						sol.remove(bestCandOut);
+						CL.add(bestCandOut);
+					}
+					if (bestCandIn != null) {
+						sol.add(bestCandIn);
+						CL.remove(bestCandIn);
+					}
+					ObjFunction.evaluate(sol);
+				}
+
+			} while (minDeltaCost < -Double.MIN_VALUE);
+
+
+			return null;
+
+		} else {
+
+			do {
+				minDeltaCost = Double.POSITIVE_INFINITY;
+				updateCL();
+					
+				// Evaluate insertions
+				for (Integer candIn : CL) {
+					double deltaCost = ObjFunction.evaluateInsertionCost(candIn, sol);
+					if (deltaCost < minDeltaCost) {
+						minDeltaCost = deltaCost;
+						bestCandIn = candIn;
+						bestCandOut = null;
+					}
+				}
+				// Evaluate removals
+				for (Integer candOut : sol) {
+					double deltaCost = ObjFunction.evaluateRemovalCost(candOut, sol);
+					if (deltaCost < minDeltaCost) {
+						minDeltaCost = deltaCost;
+						bestCandIn = null;
 						bestCandOut = candOut;
 					}
 				}
-			}
-			// Implement the best move, if it reduces the solution cost.
-			if (minDeltaCost < -Double.MIN_VALUE) {
-				if (bestCandOut != null) {
-					sol.remove(bestCandOut);
-					CL.add(bestCandOut);
+				// Evaluate exchanges
+				for (Integer candIn : CL) {
+					for (Integer candOut : sol) {
+						double deltaCost = ObjFunction.evaluateExchangeCost(candIn, candOut, sol);
+						if (deltaCost < minDeltaCost) {
+							minDeltaCost = deltaCost;
+							bestCandIn = candIn;
+							bestCandOut = candOut;
+						}
+					}
 				}
-				if (bestCandIn != null) {
-					sol.add(bestCandIn);
-					CL.remove(bestCandIn);
+				// Implement the best move, if it reduces the solution cost.
+				if (minDeltaCost < -Double.MIN_VALUE) {
+					if (bestCandOut != null) {
+						sol.remove(bestCandOut);
+						CL.add(bestCandOut);
+					}
+					if (bestCandIn != null) {
+						sol.add(bestCandIn);
+						CL.remove(bestCandIn);
+					}
+					ObjFunction.evaluate(sol);
 				}
-				ObjFunction.evaluate(sol);
-			}
-		} while (minDeltaCost < -Double.MIN_VALUE);
-
-		return null;
+			} while (minDeltaCost < -Double.MIN_VALUE);
+	
+			return null;
+		}
 	}
 
 	/**
@@ -187,10 +248,11 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	public static void main(String[] args) throws IOException {
 
 		long startTime = System.currentTimeMillis();
-		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf200");
+		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf100");
 		double alpha = 0.05;
 		int iterations = 1000;
-		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, QBF_Inverse);
+		boolean useFirstImprovingLocalSearch = true;
+		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, QBF_Inverse, useFirstImprovingLocalSearch);
 		Solution<Integer> bestSol = grasp.solve();
 		System.out.println("alpha " + alpha + ", iterations " + iterations + ", maxVal = " + bestSol);
 		long endTime   = System.currentTimeMillis();
