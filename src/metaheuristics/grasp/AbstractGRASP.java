@@ -32,6 +32,11 @@ public abstract class AbstractGRASP<E> {
 	static Random rng = new Random(0);
 
 	/**
+	 * a random number generator for alpha's in Reactive GRASP
+	 */
+	static Random alphaRng = new Random(0);
+
+	/**
 	 * the objective function being optimized
 	 */
 	protected Evaluator<E> ObjFunction;
@@ -75,6 +80,11 @@ public abstract class AbstractGRASP<E> {
 	 * the Restricted Candidate List of elements to enter the solution.
 	 */
 	protected ArrayList<E> RCL;
+
+	/**
+	 * the max time to run the solver in seconds
+	 */
+	protected int maxTimeInSeconds;
 
 	/**
 	 * Creates the Candidate List, which is an ArrayList of candidate elements
@@ -129,10 +139,11 @@ public abstract class AbstractGRASP<E> {
 	 * @param iterations
 	 *            The number of iterations which the GRASP will be executed.
 	 */
-	public AbstractGRASP(Evaluator<E> objFunction, Double alpha, Integer iterations) {
+	public AbstractGRASP(Evaluator<E> objFunction, Double alpha, Integer iterations, Integer maxTimeInSeconds) {
 		this.ObjFunction = objFunction;
 		this.alpha = alpha;
 		this.iterations = iterations;
+		this.maxTimeInSeconds = maxTimeInSeconds;
 	}
 	
 	/**
@@ -145,14 +156,27 @@ public abstract class AbstractGRASP<E> {
 	public Solution<E> constructiveHeuristic(ConstructiveMethod method, String... args) {
 		switch (method) {
 			case STANDARD:
-				return standardConstructiveHeuristic();
+				return standardConstructiveHeuristic(alpha);
 			case RANDOM_PLUS_GREEDY:
 				return randomPlusGreedyConstructiveHeuristic(args);
 			case REACTIVE_GRASP:
+				return standardConstructiveHeuristic(getAlphasForRandomReactive());
 			default:
 				System.out.println("Method not implemented");
 				return createEmptySol();
 		}
+	}
+
+	private double[] getAlphasForRandomReactive() {
+		return new double[]{
+				0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, // 7 out of 25 	= 28%
+				0.2, 0.2, 0.2, 0.2, 0.2, 0.2, // 6 out of 25 		= 24%
+				0.3, 0.3, 0.3, 0.3, 0.3, // 5 out of 25 			= 20%
+				0.4, 0.4, 0.4, 0.4, // 4 out of 25 					= 16%
+				0.5, 0.5, 0.5, // 3 out of 25 						= 12%
+				0.6, 0.6, // 2 out of 25 							= 8%
+				0.7 // 1 out of 25 									= 4%
+		};
 	}
 
 	private Solution<E> randomPlusGreedyConstructiveHeuristic(String... args) {
@@ -196,15 +220,17 @@ public abstract class AbstractGRASP<E> {
 			}
 			return sol;
 		} else {
-			return standardConstructiveHeuristic();
+			return standardConstructiveHeuristic(alpha);
 		}
 	}
 
-	private Solution<E> standardConstructiveHeuristic() {
+	private Solution<E> standardConstructiveHeuristic(double... alphaValues) {
 		CL = makeCL();
 		RCL = makeRCL();
 		sol = createEmptySol();
 		cost = Double.POSITIVE_INFINITY;
+
+		double currentAlpha = alphaValues[alphaRng.nextInt(alphaValues.length)];
 
 		/* Main loop, which repeats until the stopping criteria is reached. */
 		while (!constructiveStopCriteria()) {
@@ -231,7 +257,7 @@ public abstract class AbstractGRASP<E> {
 			 */
 			for (E c : CL) {
 				Double deltaCost = ObjFunction.evaluateInsertionCost(c, sol);
-				if (deltaCost <= minCost + alpha * (maxCost - minCost)) {
+				if (deltaCost <= minCost + currentAlpha * (maxCost - minCost)) {
 					RCL.add(c);
 				}
 			}
@@ -258,8 +284,6 @@ public abstract class AbstractGRASP<E> {
 	 * @return The best feasible solution obtained throughout all iterations.
 	 */
 	public Solution<E> solve(ConstructiveMethod constructiveMethod, String... args) {
-		int MAX_TIME_IN_SECONDS = 30 * 60; // 30 minutes
-
 		Instant started = Instant.now();
 		bestSol = createEmptySol();
 		for (int i = 0; i < iterations; i++) {
@@ -273,7 +297,7 @@ public abstract class AbstractGRASP<E> {
 				if (verbose)
 					System.out.println("(Iter. " + i + ") BestSol = " + bestSol);
 			}
-			if (Instant.now().getEpochSecond() > started.plusSeconds(MAX_TIME_IN_SECONDS).getEpochSecond()) {
+			if (Instant.now().getEpochSecond() > started.plusSeconds(maxTimeInSeconds).getEpochSecond()) {
 				System.out.println("Interrupting");
 				break;
 			}

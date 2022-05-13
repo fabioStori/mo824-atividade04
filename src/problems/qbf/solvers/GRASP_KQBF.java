@@ -42,8 +42,8 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	 * @throws IOException
 	 *             necessary for I/O operations.
 	 */
-	public GRASP_KQBF(Double alpha, Integer iterations, KQBF_Inverse KQBFInverse) throws IOException {
-		super(KQBFInverse, alpha, iterations);
+	public GRASP_KQBF(Double alpha, Integer iterations, Integer maxTimeInSeconds, KQBF_Inverse KQBFInverse) throws IOException {
+		super(KQBFInverse, alpha, iterations, maxTimeInSeconds);
 		this.KQBFInverse = KQBFInverse;
 		this.allCandidateList = makeCL();
 	}
@@ -189,15 +189,32 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 		long startTime = System.currentTimeMillis();
 		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf080");
 		double alpha = 0.05;
-		int iterations = 1000;
+		int iterations = 10000;
+		int maxTimeInSeconds = 30 * 60; // 30 minutes
+		ConstructiveMethod method = ConstructiveMethod.REACTIVE_GRASP;
 
-		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, QBF_Inverse);
-
-		// Running STANDARD method
-		Solution<Integer> bestSol = grasp.solve(ConstructiveMethod.STANDARD);
-
-		// Running RANDOM_PLUS_GREEDY method: p=750 (random partial solution), iteration="0" (always zero)
-//		Solution<Integer> bestSol = grasp.solve(ConstructiveMethod.RANDOM_PLUS_GREEDY, "750", "0"); // p, iteration
+		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, maxTimeInSeconds, QBF_Inverse);
+		Solution<Integer> bestSol;
+		System.out.println(
+				"Running method: " + method +
+				". Alpha: " + (ConstructiveMethod.REACTIVE_GRASP.equals(method) ? "N/A" : alpha) +
+				". Max iterations: " + iterations +
+				". Max time in seconds: " + maxTimeInSeconds
+		);
+		switch (method) {
+			case RANDOM_PLUS_GREEDY:
+				String randomizedThreshold = "500";
+				String currentIteration = "0";
+				bestSol = grasp.solve(ConstructiveMethod.RANDOM_PLUS_GREEDY, randomizedThreshold, currentIteration);
+				break;
+			case REACTIVE_GRASP:
+			case STANDARD:
+				bestSol = grasp.solve(method);
+				break;
+			default:
+				System.out.println("Method " + method + " not implemented.");
+				bestSol = null;
+		}
 
 		System.out.println("alpha " + alpha + ", iterations " + iterations + ", maxVal = " + bestSol);
 		long endTime   = System.currentTimeMillis();
