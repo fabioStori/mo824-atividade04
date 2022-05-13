@@ -3,6 +3,7 @@
  */
 package metaheuristics.grasp;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -200,7 +201,9 @@ public abstract class AbstractGRASP<E> {
 	 * @return The best feasible solution obtained throughout all iterations.
 	 */
 	public Solution<E> solve() {
+		int MAX_TIME_IN_SECONDS = 30 * 60; // 30 minutes
 
+		Instant started = Instant.now();
 		bestSol = createEmptySol();
 		for (int i = 0; i < iterations; i++) {
 			constructiveHeuristic();
@@ -209,6 +212,10 @@ public abstract class AbstractGRASP<E> {
 				bestSol = new Solution<E>(sol);
 				if (verbose)
 					System.out.println("(Iter. " + i + ") BestSol = " + bestSol);
+			}
+			if (Instant.now().getEpochSecond() > started.plusSeconds(MAX_TIME_IN_SECONDS).getEpochSecond()) {
+				System.out.println("Interrupting");
+				break;
 			}
 		}
 
