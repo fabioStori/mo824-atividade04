@@ -142,8 +142,62 @@ public abstract class AbstractGRASP<E> {
 	 * 
 	 * @return A feasible solution to the problem being minimized.
 	 */
-	public Solution<E> constructiveHeuristic() {
+	public Solution<E> constructiveHeuristic(ConstructiveMethod method, String... args) {
+		switch (method) {
+			case STANDARD:
+				return standardConstructiveHeuristic();
+			case RANDOM_PLUS_GREEDY:
+				return randomPlusGreedyConstructiveHeuristic(args);
+			case REACTIVE_GRASP:
+			default:
+				System.out.println("Method not implemented");
+				return createEmptySol();
+		}
+	}
 
+	private Solution<E> randomPlusGreedyConstructiveHeuristic(String... args) {
+		CL = makeCL();
+		RCL = makeRCL();
+		sol = createEmptySol();
+		cost = Double.POSITIVE_INFINITY;
+		Integer p = Integer.parseInt(args[0]);
+		Integer iteration = Integer.parseInt(args[1]);
+
+		if (iteration > p) {
+			/* Main loop, which repeats until the stopping criteria is reached. */
+			while (!constructiveStopCriteria()) {
+
+				E minCandidate = null;
+				Double minCost = Double.POSITIVE_INFINITY;
+				cost = ObjFunction.evaluate(sol);
+				updateCL();
+
+				/*
+				 * Explore all candidate elements to enter the solution, saving the
+				 * lowest cost variation achieved by the candidates.
+				 */
+				for (E c : CL) {
+					Double deltaCost = ObjFunction.evaluateInsertionCost(c, sol);
+					if (deltaCost < minCost) {
+						minCost = deltaCost;
+						minCandidate = c;
+					}
+				}
+
+				if (minCandidate != null) {
+					CL.remove(minCandidate);
+					sol.add(minCandidate);
+					ObjFunction.evaluate(sol);
+					RCL.clear();
+				}
+			}
+			return sol;
+		} else {
+			return standardConstructiveHeuristic();
+		}
+	}
+
+	private Solution<E> standardConstructiveHeuristic() {
 		CL = makeCL();
 		RCL = makeRCL();
 		sol = createEmptySol();
@@ -200,13 +254,16 @@ public abstract class AbstractGRASP<E> {
 	 * 
 	 * @return The best feasible solution obtained throughout all iterations.
 	 */
-	public Solution<E> solve() {
+	public Solution<E> solve(ConstructiveMethod constructiveMethod, String... args) {
 		int MAX_TIME_IN_SECONDS = 30 * 60; // 30 minutes
 
 		Instant started = Instant.now();
 		bestSol = createEmptySol();
 		for (int i = 0; i < iterations; i++) {
-			constructiveHeuristic();
+			if (ConstructiveMethod.RANDOM_PLUS_GREEDY.equals(constructiveMethod)) {
+				args[1] = String.valueOf(i);
+			}
+			constructiveHeuristic(constructiveMethod, args);
 			localSearch();
 			if (bestSol.cost > sol.cost) {
 				bestSol = new Solution<E>(sol);
@@ -231,6 +288,10 @@ public abstract class AbstractGRASP<E> {
 	 */
 	public Boolean constructiveStopCriteria() {
 		return (cost > sol.cost) ? false : true;
+	}
+
+	public enum ConstructiveMethod {
+		STANDARD, RANDOM_PLUS_GREEDY, REACTIVE_GRASP
 	}
 
 }

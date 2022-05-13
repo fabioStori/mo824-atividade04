@@ -187,11 +187,18 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	public static void main(String[] args) throws IOException {
 
 		long startTime = System.currentTimeMillis();
-		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf200");
+		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf080");
 		double alpha = 0.05;
 		int iterations = 1000;
+
 		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, QBF_Inverse);
-		Solution<Integer> bestSol = grasp.solve();
+
+		// Running STANDARD method
+		Solution<Integer> bestSol = grasp.solve(ConstructiveMethod.STANDARD);
+
+		// Running RANDOM_PLUS_GREEDY method: p=750 (random partial solution), iteration="0" (always zero)
+//		Solution<Integer> bestSol = grasp.solve(ConstructiveMethod.RANDOM_PLUS_GREEDY, "750", "0"); // p, iteration
+
 		System.out.println("alpha " + alpha + ", iterations " + iterations + ", maxVal = " + bestSol);
 		long endTime   = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
