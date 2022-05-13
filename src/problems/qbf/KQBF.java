@@ -23,7 +23,7 @@ import solutions.Solution;
  * @author ccavellucci, fusberti
  *
  */
-public class QBF implements Evaluator<Integer> {
+public class KQBF implements Evaluator<Integer> {
 
 	/**
 	 * Dimension of the domain.
@@ -33,7 +33,7 @@ public class QBF implements Evaluator<Integer> {
 	/**
 	 * Max capacity for the KQBF problem
 	 */
-	public Integer capacity;
+	public Double capacity;
 
 	/**
 	 * The array of numbers representing the domain.
@@ -60,7 +60,7 @@ public class QBF implements Evaluator<Integer> {
 	 * @throws IOException
 	 *             Necessary for I/O operations.
 	 */
-	public QBF(String filename) throws IOException {
+	public KQBF(String filename) throws IOException {
 		size = readInput(filename);
 		variables = allocateVariables();
 	}
@@ -94,7 +94,7 @@ public class QBF implements Evaluator<Integer> {
 		return size;
 	}
 
-	public Integer getCapacity() {
+	public Double getCapacity() {
 		return capacity;
 	}
 
@@ -115,8 +115,7 @@ public class QBF implements Evaluator<Integer> {
 	public Double evaluate(Solution<Integer> sol) {
 		// Calculate new weights here
 		setVariables(sol);
-		return sol.cost = evaluateQBF();
-
+		return sol.cost = evaluateQBF(sol);
 	}
 
 	/**
@@ -125,8 +124,7 @@ public class QBF implements Evaluator<Integer> {
 	 * 
 	 * @return The value of the QBF.
 	 */
-	public Double evaluateQBF() {
-
+	public Double evaluateQBF(Solution<Integer> sol) {
 		Double aux = (double) 0, sum = (double) 0;
 		Double vecAux[] = new Double[size];
 
@@ -138,6 +136,12 @@ public class QBF implements Evaluator<Integer> {
 			sum += aux * variables[i];
 			aux = (double) 0;
 		}
+
+		Double capacity = 0.0;
+		for (int i = 0; i < size; i++) {
+			capacity += variables[i] == 1.0 ? weights[i] : 0; //
+		}
+		sol.usedCapacity = capacity;
 
 		return sum;
 
@@ -298,7 +302,7 @@ public class QBF implements Evaluator<Integer> {
 		stok.nextToken();
 		Integer _size = (int) stok.nval;
 		stok.nextToken();
-		capacity = (int) stok.nval;
+		capacity = stok.nval;
 		weights = new Double[_size];
 		A = new Double[_size][_size];
 
@@ -360,21 +364,21 @@ public class QBF implements Evaluator<Integer> {
 	 */
 	public static void main(String[] args) throws IOException {
 
-		QBF qbf = new QBF("instances/qbf/qbf040");
-		qbf.printMatrix();
+		KQBF KQBF = new KQBF("instances/qbf/qbf040");
+		KQBF.printMatrix();
 		Double maxVal = Double.NEGATIVE_INFINITY;
 		
 		// evaluates randomly generated values for the domain, saving the best
 		// one.
 		for (int i = 0; i < 10000000; i++) {
-			for (int j = 0; j < qbf.size; j++) {
+			for (int j = 0; j < KQBF.size; j++) {
 				if (Math.random() < 0.5)
-					qbf.variables[j] = 0.0;
+					KQBF.variables[j] = 0.0;
 				else
-					qbf.variables[j] = 1.0;
+					KQBF.variables[j] = 1.0;
 			}
 			//System.out.println("x = " + Arrays.toString(qbf.variables));
-			Double eval = qbf.evaluateQBF();
+			Double eval = KQBF.evaluateQBF(new Solution<>());
 			//System.out.println("f(x) = " + eval);
 			if (maxVal < eval)
 				maxVal = eval;
@@ -382,18 +386,18 @@ public class QBF implements Evaluator<Integer> {
 		System.out.println("maxVal = " + maxVal);
 
 		// evaluates the zero array.
-		for (int j = 0; j < qbf.size; j++) {
-			qbf.variables[j] = 0.0;
+		for (int j = 0; j < KQBF.size; j++) {
+			KQBF.variables[j] = 0.0;
 		}
-		System.out.println("x = " + Arrays.toString(qbf.variables));
-		System.out.println("f(x) = " + qbf.evaluateQBF());
+		System.out.println("x = " + Arrays.toString(KQBF.variables));
+		System.out.println("f(x) = " + KQBF.evaluateQBF(new Solution<>()));
 
 		// evaluates the all-ones array.
-		for (int j = 0; j < qbf.size; j++) {
-			qbf.variables[j] = 1.0;
+		for (int j = 0; j < KQBF.size; j++) {
+			KQBF.variables[j] = 1.0;
 		}
-		System.out.println("x = " + Arrays.toString(qbf.variables));
-		System.out.println("f(x) = " + qbf.evaluateQBF());
+		System.out.println("x = " + Arrays.toString(KQBF.variables));
+		System.out.println("f(x) = " + KQBF.evaluateQBF(new Solution<>()));
 		
 		
 

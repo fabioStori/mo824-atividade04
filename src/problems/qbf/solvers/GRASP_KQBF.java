@@ -2,9 +2,11 @@ package problems.qbf.solvers;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import metaheuristics.grasp.AbstractGRASP;
-import problems.qbf.QBF_Inverse;
+import problems.qbf.KQBF_Inverse;
 import solutions.Solution;
 
 
@@ -17,12 +19,14 @@ import solutions.Solution;
  * 
  * @author ccavellucci, fusberti
  */
-public class GRASP_QBF extends AbstractGRASP<Integer> {
+public class GRASP_KQBF extends AbstractGRASP<Integer> {
 
 	/**
-	 * TBD
+	 * KQBFInverse obj function
 	 */
-	public QBF_Inverse QBF_Inverse;
+	public KQBF_Inverse KQBFInverse;
+
+	public List<Integer> allCandidateList;
 
 	/**
 	 * Constructor for the GRASP_QBF class. An inverse QBF objective function is
@@ -33,15 +37,15 @@ public class GRASP_QBF extends AbstractGRASP<Integer> {
 	 *            [0,1])
 	 * @param iterations
 	 *            The number of iterations which the GRASP will be executed.
-	 * @param filename
-	 *            Name of the file for which the objective function parameters
-	 *            should be read.
+	 * @param KQBFInverse
+	 *            KQBF_ Inverse Evaluator.
 	 * @throws IOException
 	 *             necessary for I/O operations.
 	 */
-	public GRASP_QBF(Double alpha, Integer iterations, QBF_Inverse QBF_Inverse) throws IOException {
-		super(QBF_Inverse, alpha, iterations);
-		this.QBF_Inverse = QBF_Inverse;
+	public GRASP_KQBF(Double alpha, Integer iterations, KQBF_Inverse KQBFInverse) throws IOException {
+		super(KQBFInverse, alpha, iterations);
+		this.KQBFInverse = KQBFInverse;
+		this.allCandidateList = makeCL();
 	}
 
 	/*
@@ -54,13 +58,9 @@ public class GRASP_QBF extends AbstractGRASP<Integer> {
 
 		ArrayList<Integer> _CL = new ArrayList<Integer>();
 
-		// Double[] weights = QBF_Inverse.getWeights();
-		// Integer capacity = QBF_Inverse.getCapacity();
 		for (int i = 0; i < ObjFunction.getDomainSize(); i++) {
-			// if (weights[i] <= capacity) {
 			Integer cand = i;
 			_CL.add(cand);
-			// }
 		}
 
 		return _CL;
@@ -88,10 +88,19 @@ public class GRASP_QBF extends AbstractGRASP<Integer> {
 	 */
 	@Override
 	public void updateCL() {
+		Double[] weights = KQBFInverse.getWeights();
+		Double freeCapacity = KQBFInverse.getCapacity() - sol.usedCapacity;
 
-		// do nothing since all elements off the solution are viable candidates.
-		// CONSTRAINT
-
+		/*
+		* Select only viable candidates given the free capacity and update the CL.
+		* */
+		ArrayList<Integer> newCL = new ArrayList<>();
+		for (Integer candidate : allCandidateList) {
+			if (!sol.contains(candidate) && weights[candidate] <= freeCapacity) {
+				newCL.add(candidate);
+			}
+		}
+		CL = newCL;
 	}
 
 	/**
@@ -105,6 +114,7 @@ public class GRASP_QBF extends AbstractGRASP<Integer> {
 	public Solution<Integer> createEmptySol() {
 		Solution<Integer> sol = new Solution<Integer>();
 		sol.cost = 0.0;
+		sol.usedCapacity = 0.0;
 		return sol;
 	}
 
@@ -177,10 +187,12 @@ public class GRASP_QBF extends AbstractGRASP<Integer> {
 	public static void main(String[] args) throws IOException {
 
 		long startTime = System.currentTimeMillis();
-		QBF_Inverse QBF_Inverse = new QBF_Inverse("instances/qbf/qbf040");
-		GRASP_QBF grasp = new GRASP_QBF(0.05, 1000, QBF_Inverse);
+		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf200");
+		double alpha = 0.05;
+		int iterations = 1000;
+		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, QBF_Inverse);
 		Solution<Integer> bestSol = grasp.solve();
-		System.out.println("maxVal = " + bestSol);
+		System.out.println("alpha " + alpha + ", iterations " + iterations + ", maxVal = " + bestSol);
 		long endTime   = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
 		System.out.println("Time = "+(double)totalTime/(double)1000+" seg");

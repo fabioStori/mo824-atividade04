@@ -1,15 +1,17 @@
 package problems.qbf;
 
+import solutions.Solution;
+
 import java.io.IOException;
 
 /**
  * Class representing the inverse of the Quadractic Binary Function
- * ({@link QBF}), which is used since the GRASP is set by
+ * ({@link KQBF}), which is used since the GRASP is set by
  * default as a minimization procedure.
  * 
  * @author ccavellucci, fusberti
  */
-public class QBF_Inverse extends QBF {
+public class KQBF_Inverse extends KQBF {
 
 	/**
 	 * Constructor for the QBF_Inverse class.
@@ -20,7 +22,7 @@ public class QBF_Inverse extends QBF {
 	 * @throws IOException
 	 *             Necessary for I/O operations.
 	 */
-	public QBF_Inverse(String filename) throws IOException {
+	public KQBF_Inverse(String filename) throws IOException {
 		super(filename);
 	}
 
@@ -29,8 +31,8 @@ public class QBF_Inverse extends QBF {
 	 * @see problems.qbf.QBF#evaluate()
 	 */
 	@Override
-	public Double evaluateQBF() {
-		return -super.evaluateQBF();
+	public Double evaluateQBF(Solution<Integer> sol) {
+		return -super.evaluateQBF(sol);
 	}
 	
 	/* (non-Javadoc)
