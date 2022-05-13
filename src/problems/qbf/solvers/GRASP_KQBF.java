@@ -3,7 +3,6 @@ package problems.qbf.solvers;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import metaheuristics.grasp.AbstractGRASP;
 import problems.qbf.KQBF_Inverse;
@@ -28,6 +27,8 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 
 	public List<Integer> allCandidateList;
 
+	public boolean useFirstImprove;
+
 	/**
 	 * Constructor for the GRASP_QBF class. An inverse QBF objective function is
 	 * passed as argument for the superclass constructor.
@@ -42,10 +43,11 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	 * @throws IOException
 	 *             necessary for I/O operations.
 	 */
-	public GRASP_KQBF(Double alpha, Integer iterations, Integer maxTimeInSeconds, KQBF_Inverse KQBFInverse) throws IOException {
+	public GRASP_KQBF(Double alpha, Integer iterations, Integer maxTimeInSeconds, boolean useFirstImprove, KQBF_Inverse KQBFInverse) throws IOException {
 		super(KQBFInverse, alpha, iterations, maxTimeInSeconds);
 		this.KQBFInverse = KQBFInverse;
 		this.allCandidateList = makeCL();
+		this.useFirstImprove = useFirstImprove;
 	}
 
 	/*
@@ -126,14 +128,80 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	 */
 	@Override
 	public Solution<Integer> localSearch() {
+		return useFirstImprove ? firstImproving() : bestImproving();
+	}
 
+	private Solution<Integer> firstImproving() {
 		Double minDeltaCost;
 		Integer bestCandIn = null, bestCandOut = null;
 
 		do {
 			minDeltaCost = Double.POSITIVE_INFINITY;
 			updateCL();
-				
+
+			// Evaluate insertions
+			for (Integer candIn : CL) {
+				double deltaCost = ObjFunction.evaluateInsertionCost(candIn, sol);
+				if (deltaCost < -Double.MIN_VALUE) {
+					minDeltaCost = deltaCost;
+					bestCandIn = candIn;
+					bestCandOut = null;
+					break;
+				}
+			}
+
+			if (bestCandIn == null) {
+				// Evaluate removals
+				for (Integer candOut : sol) {
+					double deltaCost = ObjFunction.evaluateRemovalCost(candOut, sol);
+					if (deltaCost < -Double.MIN_VALUE) {
+						minDeltaCost = deltaCost;
+						bestCandIn = null;
+						bestCandOut = candOut;
+						break;
+					}
+				}
+
+				if (bestCandOut == null) {
+					// Evaluate exchanges
+					for (Integer candIn : CL) {
+						for (Integer candOut : sol) {
+							double deltaCost = ObjFunction.evaluateExchangeCost(candIn, candOut, sol);
+							if (deltaCost < -Double.MIN_VALUE) {
+								minDeltaCost = deltaCost;
+								bestCandIn = candIn;
+								bestCandOut = candOut;
+								break;
+							}
+						}
+					}
+				}
+			}
+			// Implement the best move, if it reduces the solution cost.
+			if (minDeltaCost < -Double.MIN_VALUE) {
+				if (bestCandOut != null) {
+					sol.remove(bestCandOut);
+					CL.add(bestCandOut);
+				}
+				if (bestCandIn != null) {
+					sol.add(bestCandIn);
+					CL.remove(bestCandIn);
+				}
+				ObjFunction.evaluate(sol);
+			}
+		} while (minDeltaCost < -Double.MIN_VALUE);
+
+		return null;
+	}
+
+	private Solution<Integer> bestImproving() {
+		Double minDeltaCost;
+		Integer bestCandIn = null, bestCandOut = null;
+
+		do {
+			minDeltaCost = Double.POSITIVE_INFINITY;
+			updateCL();
+
 			// Evaluate insertions
 			for (Integer candIn : CL) {
 				double deltaCost = ObjFunction.evaluateInsertionCost(candIn, sol);
@@ -189,17 +257,19 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 		long startTime = System.currentTimeMillis();
 		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf080");
 		double alpha = 0.05;
-		int iterations = 10000;
+		int iterations = 1000;
 		int maxTimeInSeconds = 30 * 60; // 30 minutes
-		ConstructiveMethod method = ConstructiveMethod.REACTIVE_GRASP;
+		boolean useFirstImprove = false;
+		ConstructiveMethod method = ConstructiveMethod.BEST_ALPHA_REACTIVE_GRASP;
 
-		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, maxTimeInSeconds, QBF_Inverse);
+		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, maxTimeInSeconds, useFirstImprove, QBF_Inverse);
 		Solution<Integer> bestSol;
 		System.out.println(
 				"Running method: " + method +
-				". Alpha: " + (ConstructiveMethod.REACTIVE_GRASP.equals(method) ? "N/A" : alpha) +
+				". Alpha: " + (method.name().contains("REACTIVE_GRASP") ? "N/A" : alpha) +
 				". Max iterations: " + iterations +
-				". Max time in seconds: " + maxTimeInSeconds
+				". Max time in seconds: " + maxTimeInSeconds +
+				". Use first-improving: " + useFirstImprove
 		);
 		switch (method) {
 			case RANDOM_PLUS_GREEDY:
@@ -207,7 +277,8 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 				String currentIteration = "0";
 				bestSol = grasp.solve(ConstructiveMethod.RANDOM_PLUS_GREEDY, randomizedThreshold, currentIteration);
 				break;
-			case REACTIVE_GRASP:
+			case RANDOM_REACTIVE_GRASP:
+			case BEST_ALPHA_REACTIVE_GRASP:
 			case STANDARD:
 				bestSol = grasp.solve(method);
 				break;
