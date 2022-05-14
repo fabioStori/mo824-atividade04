@@ -255,7 +255,7 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	public static void main(String[] args) throws IOException {
 
 		long startTime = System.currentTimeMillis();
-		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf200");
+		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf020");
 		double alpha = 0.05;
 		int iterations = 1000;
 		int maxTimeInSeconds = 30 * 60; // 30 minutes
