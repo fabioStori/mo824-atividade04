@@ -255,12 +255,12 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 	public static void main(String[] args) throws IOException {
 
 		long startTime = System.currentTimeMillis();
-		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf080");
+		KQBF_Inverse QBF_Inverse = new KQBF_Inverse("instances/kqbf/kqbf200");
 		double alpha = 0.05;
 		int iterations = 1000;
 		int maxTimeInSeconds = 30 * 60; // 30 minutes
 		boolean useFirstImprove = false;
-		ConstructiveMethod method = ConstructiveMethod.BEST_ALPHA_REACTIVE_GRASP;
+		ConstructiveMethod method = ConstructiveMethod.RANDOM_PLUS_GREEDY;
 
 		GRASP_KQBF grasp = new GRASP_KQBF(alpha, iterations, maxTimeInSeconds, useFirstImprove, QBF_Inverse);
 		Solution<Integer> bestSol;
@@ -273,7 +273,7 @@ public class GRASP_KQBF extends AbstractGRASP<Integer> {
 		);
 		switch (method) {
 			case RANDOM_PLUS_GREEDY:
-				String randomizedThreshold = "500";
+				String randomizedThreshold = "3";
 				String currentIteration = "0";
 				bestSol = grasp.solve(ConstructiveMethod.RANDOM_PLUS_GREEDY, randomizedThreshold, currentIteration);
 				break;

@@ -195,48 +195,60 @@ public abstract class AbstractGRASP<E> {
 	}
 
 	private Solution<E> randomPlusGreedyConstructiveHeuristic(String... args) {
+		Integer p = Integer.parseInt(args[0]);
+		Integer iteration = Integer.parseInt(args[1]);
 		CL = makeCL();
 		RCL = makeRCL();
 		sol = createEmptySol();
 		cost = Double.POSITIVE_INFINITY;
-		Integer p = Integer.parseInt(args[0]);
-		Integer iteration = Integer.parseInt(args[1]);
 
-		if (iteration > p) {
-			if (iteration == p + 1) {
-				System.out.println("(Iter. " + iteration + ") Started to use greedy");
+		usedAlpha = alphas[alphaRng.nextInt(alphas.length)];
+
+		/* Main loop, which repeats until the stopping criteria is reached. */
+		int i = 0;
+		while (!constructiveStopCriteria()) {
+
+			double maxCost = Double.NEGATIVE_INFINITY, minCost = Double.POSITIVE_INFINITY;
+			cost = ObjFunction.evaluate(sol);
+			updateCL();
+
+			/*
+			 * Explore all candidate elements to enter the solution, saving the
+			 * highest and lowest cost variation achieved by the candidates.
+			 */
+			for (E c : CL) {
+				Double deltaCost = ObjFunction.evaluateInsertionCost(c, sol);
+				if (deltaCost < minCost)
+					minCost = deltaCost;
+				if (deltaCost > maxCost)
+					maxCost = deltaCost;
 			}
-			/* Main loop, which repeats until the stopping criteria is reached. */
-			while (!constructiveStopCriteria()) {
 
-				E minCandidate = null;
-				Double minCost = Double.POSITIVE_INFINITY;
-				cost = ObjFunction.evaluate(sol);
-				updateCL();
-
-				/*
-				 * Explore all candidate elements to enter the solution, saving the
-				 * lowest cost variation achieved by the candidates.
-				 */
-				for (E c : CL) {
-					Double deltaCost = ObjFunction.evaluateInsertionCost(c, sol);
-					if (deltaCost < minCost) {
-						minCost = deltaCost;
-						minCandidate = c;
-					}
-				}
-
-				if (minCandidate != null) {
-					CL.remove(minCandidate);
-					sol.add(minCandidate);
-					ObjFunction.evaluate(sol);
-					RCL.clear();
+			/*
+			 * Among all candidates, insert into the RCL those with the highest
+			 * performance using parameter alpha as threshold.
+			 */
+			for (E c : CL) {
+				Double deltaCost = ObjFunction.evaluateInsertionCost(c, sol);
+				if (deltaCost <= minCost + (i > p ? 0 : usedAlpha) * (maxCost - minCost)) {
+					RCL.add(c);
 				}
 			}
-			return sol;
-		} else {
-			return standardConstructiveHeuristic();
+
+			/* Choose a candidate randomly from the RCL */
+			if (!RCL.isEmpty()) {
+				int rndIndex = rng.nextInt(RCL.size());
+				E inCand = RCL.get(rndIndex);
+				CL.remove(inCand);
+				sol.add(inCand);
+				ObjFunction.evaluate(sol);
+				RCL.clear();
+			}
+			i++;
 		}
+
+		return sol;
+
 	}
 
 	private Solution<E> standardConstructiveHeuristic() {
